@@ -1,0 +1,96 @@
+import numpy as np
+import pandas as pd
+import matplotlib as plt
+import chardet
+import pandas as pd
+
+#Load Training Data
+data = pd.read_csv("/Users/Amara/Data_Science/train.csv")  
+data.head()
+
+#Dimensions of Training Data
+data.shape
+#Explore Columns
+
+data.info()
+data.columns
+#Description
+data.describe()
+# Check Datatypes
+
+data.describe(include=np.object)
+data.dtypes
+
+# Print head or tail
+data.head()
+data.tail()
+# Check for any null or missing values
+data.isnull().values.any()
+# Check missing values in each column of training data
+data.isnull().sum()
+data['women_parliament_seats_rate'].unique().tolist()
+data['improved_sanitation'].unique().tolist()
+
+data['national_income'].unique().tolist()
+
+data['mobile_subscriptions'].unique().tolist()
+
+data['internet_users'].unique().tolist()
+
+#Replace unknown with -1
+#change the type where data type to float where value = 1000 and if value is 100 then multiply it by 10 
+data['internet_users'].head()
+data.loc[data['internet_users'] == 'unknown', 'internet_users'] = -1
+data.loc[data['internet_users'].str.split(' ').str[2] == '1000', 
+               'internet_users'] = data['internet_users'].str.split(' ').str[0].astype(float)
+
+data.loc[data['internet_users'].str.split(' ').str[2] == '100', 
+               'internet_users'] = data['internet_users'].str.split(' ').str[0].astype(float) * 10
+
+data['internet_users'] = data['internet_users'].astype(float) 
+data['internet_users'].unique().tolist()
+
+# change data type of columns
+d = data.copy()
+col_list = [c for c in d.columns if d[c].dtype == 'object']
+#The simplest way to convert a column to a categorical type is to use astype('category')
+for c in col_list:
+    if c != 'internet_users':
+        d[c] = d[c].astype('category')
+        #to convert a Categorical column to its numerical codes
+        d[c] = d[c].cat.codes
+        
+d.head()
+# Deal with Missing Values
+columns = ['agricultural_land', 'forest_area', 'armed_forces_total', 
+           'urban_pop_minor_cities', 'urban_pop_major_cities', 'secure_internet_servers_total']
+
+for c in columns:
+    missing_vals = d[c].isnull().sum()
+    observed_vals = d.loc[d[c].notnull(), c]
+    d.loc[d[c].isnull(), c] = observed_vals.mean()
+d.head()
+d.isnull().sum()
+#10 annual values can be inferred from inflation monthly
+#df = pd.DataFrame(d, columns=['inflation_monthly', 'inflation_annual'])
+
+from sklearn import linear_model
+#select rows where inflation_annual is not null 
+d = d.drop(columns=['inflation_monthly', 'inflation_weekly'])
+X = d.loc[d['inflation_annual'].notnull()]
+#select inflation column only and set it equal to y
+y = d.loc[d['inflation_annual'].notnull(), 'inflation_annual']
+#put input data only in X and drop predicted column
+X = X.drop(columns=['inflation_annual'])
+
+print(X.shape, y.shape)
+
+# Train our model
+model = linear_model.LinearRegression()
+model.fit(X, y)
+X_miss = d[d['inflation_annual'].isnull()]
+X_miss = X_miss.drop(columns = ['inflation_annual'])
+print(X_miss.shape)
+#fill null values with predicted values using linear regression
+d.loc[d['inflation_annual'].isnull(), 'inflation_annual'] = model.predict(X_miss)
+d.isnull().sum()
